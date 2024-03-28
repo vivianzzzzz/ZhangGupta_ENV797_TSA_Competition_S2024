@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(readxl)
 library(lubridate)
 library(dplyr)
+library(forecast) 
 ```
 ```{r}
 load_raw <- read_excel("data/load.xlsx")
@@ -26,5 +27,11 @@ load <- load_raw %>%
 
 load_trainning <- filter(load, load_trainning)
 load_testing <- filter(load, load_testing)
+```
+
+```{r}
+ts_load_training <- msts(load_trainning$daily_mean, 
+                           seasonal.periods =c(7,365.25),
+                           start=c(2006,01,01))
 ```
 
