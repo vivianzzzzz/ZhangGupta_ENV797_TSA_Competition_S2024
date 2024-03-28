@@ -15,14 +15,14 @@ library(lubridate)
 library(dplyr)
 ```
 ```{r}
-load <- read_excel("data/load.xlsx")
-View(load)
-load <- load %>%
+load_raw <- read_excel("data/load.xlsx")
+load <- load_raw %>%
   mutate(date = ymd(date)) %>%
   mutate(daily_mean = rowMeans(select(., 3:26), na.rm = TRUE)) %>%
   mutate(load_trainning = between(date, as.Date("2005-01-01"), as.Date("2011-05-31"))) %>%
   mutate(load_testing = format(date, "%Y-%m") == "2011-06") %>%
-  filter(!is.na(daily_mean))
+  filter(!is.na(daily_mean)) %>%
+  select(meter_id,date,daily_mean,load_trainning,load_testing)
 
 load_trainning <- filter(load, load_trainning)
 load_testing <- filter(load, load_testing)
