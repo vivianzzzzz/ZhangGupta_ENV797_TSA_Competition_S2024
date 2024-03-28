@@ -16,22 +16,37 @@ library(dplyr)
 library(forecast) 
 ```
 ```{r}
-load_raw <- read_excel("data/load.xlsx")
 load <- load_raw %>%
   mutate(date = ymd(date)) %>%
   mutate(daily_mean = rowMeans(select(., 3:26), na.rm = TRUE)) %>%
-  mutate(load_trainning = between(date, as.Date("2005-01-01"), as.Date("2011-05-31"))) %>%
-  mutate(load_testing = format(date, "%Y-%m") == "2011-06") %>%
   filter(!is.na(daily_mean)) %>%
-  select(meter_id,date,daily_mean,load_trainning,load_testing)
-
-load_trainning <- filter(load, load_trainning)
-load_testing <- filter(load, load_testing)
+  select(meter_id,date,daily_mean)
 ```
 
 ```{r}
-ts_load_training <- msts(load_trainning$daily_mean, 
+#Creating time series
+ts_load <- msts(load$daily_mean, 
                            seasonal.periods =c(7,365.25),
-                           start=c(2006,01,01))
+                           start=c(2005,01,01))
+
+ts_load_training <- subset(ts_load,end = length(ts_load)-30)
+ts_load_testing <- subset(ts_load,start = length(ts_load)-30)
+
+ts_load_training %>% mstl() %>%
+  autoplot()
+```
+
+```{r}
+# TBATS model
+TBATS_fit <- tbats(ts_load_training)
+
+TBATS_forcast <- forecast(TBATS_fit, h=30)
+
+autoplot(TBATS_forcast)
+autoplot(ts_load_testing) +
+  autolayer(TBATS_forcast, series="TBATS",PI=FALSE)
+
+TBATS_scores <- accuracy(TBATS_forcast$mean,ts_load_testing)
+print(TBATS_scores)
 ```
 
