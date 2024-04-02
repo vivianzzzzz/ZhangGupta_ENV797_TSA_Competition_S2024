@@ -43,10 +43,70 @@ TBATS_fit <- tbats(ts_load_training)
 TBATS_forcast <- forecast(TBATS_fit, h=30)
 
 autoplot(TBATS_forcast)
+
+autoplot(ts_load_testing) +
+  autolayer(TBATS_forcast, series="TBATS",PI=FALSE)
+
 autoplot(ts_load_testing) +
   autolayer(TBATS_forcast, series="TBATS",PI=FALSE)
 
 TBATS_scores <- accuracy(TBATS_forcast$mean,ts_load_testing)
 print(TBATS_scores)
 ```
+```{r}
+NN_fit1 <- nnetar(ts_load_training,p=1,P=1,xreg=fourier(ts_load_training, K=c(2,12)))
+NN_for1 <- forecast(NN_fit1,h=30, xreg=fourier(ts_load_training, K=c(2,12),h=30))
+autoplot(NN_for1)
+autoplot(ts_load_testing) +
+  autolayer(NN_for1, series="Neural Network",PI=FALSE)
+
+NN_scores1 <- accuracy(NN_for1$mean,ts_load_testing)
+print(NN_scores1)
+```
+
+
+```{r}
+NN_fit2 <- nnetar(ts_load_training,p=2,P=1,xreg=fourier(ts_load_training, K=c(2,12)))
+NN_for2 <- forecast(NN_fit2,h=30, xreg=fourier(ts_load_training, K=c(2,12),h=30))
+autoplot(NN_for2)
+autoplot(ts_load_testing) +
+  autolayer(NN_for2, series="Neural Network",PI=FALSE)
+
+NN_scores2 <- accuracy(NN_for2$mean,ts_load_testing)
+print(NN_scores2)
+```
+
+```{r}
+NN_fit3 <- nnetar(ts_load_training,p=3,P=1,xreg=fourier(ts_load_training, K=c(2,12)))
+NN_for3 <- forecast(NN_fit3,h=30, xreg=fourier(ts_load_training, K=c(2,12),h=30))
+autoplot(NN_for3)
+autoplot(ts_load_testing) +
+  autolayer(NN_for3, series="Neural Network",PI=FALSE)
+
+NN_scores3 <- accuracy(NN_for3$mean,ts_load_testing)
+print(NN_scores3)
+```
+
+```{r}
+scores <- as.data.frame(
+  rbind(TBATS_scores, NN_scores1,NN_scores2, NN_scores3)
+  )
+row.names(scores) <- c("TBATS_scores", "NN_scores1","NN_scores2","NN_scores3")
+```
+
+```{r}
+# Fit load using NN1
+NN_fit1_load <- nnetar(ts_load,p=1,P=1,xreg=fourier(ts_load, K=c(2,12)))
+NN_for1_load <- forecast(NN_fit1_load,h=31, xreg=fourier(ts_load, K=c(2,12),h=31))
+autoplot(NN_for1_load)
+autoplot(ts_load) +
+  autolayer(NN_for1_load, series="Neural Network",PI=FALSE)
+
+date <- seq(ymd("2011-07-01"), ymd("2011-07-31"), by = "days")
+load<-NN_for1_load$mean
+July_NN1<-data.frame(date=date, load=load)
+July_NN1
+write.csv(July_NN1, file = "July_NN1.csv", row.names = FALSE)
+```
+
 
