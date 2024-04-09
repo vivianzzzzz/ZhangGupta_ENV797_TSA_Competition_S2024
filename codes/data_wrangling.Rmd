@@ -14,13 +14,34 @@ library(readxl)
 library(lubridate)
 library(dplyr)
 library(forecast) 
+library(smooth)
 ```
+
 ```{r}
+load_raw <- read_excel("TSA_Competition/data/load.xlsx")
 load <- load_raw %>%
   mutate(date = ymd(date)) %>%
   mutate(daily_mean = rowMeans(select(., 3:26), na.rm = TRUE)) %>%
   filter(!is.na(daily_mean)) %>%
   select(meter_id,date,daily_mean)
+
+humidity_raw <- read_excel("TSA_Competition/data/relative_humidity.xlsx")
+
+humidity <- humidity_raw %>%
+  group_by(date) %>%
+  summarise(across(starts_with('rh_ws'), mean))%>%
+  mutate(daily_mean = rowMeans(select(., 2:29), na.rm = TRUE)) %>%
+  filter(!is.na(daily_mean)) %>%
+  select(date,daily_mean)
+
+temperature_raw <- read_excel("TSA_Competition/data/temperature.xlsx")
+
+temperature <- temperature_raw %>%
+  group_by(date) %>%
+  summarise(across(starts_with('t_ws'), mean))%>%
+  mutate(daily_mean = rowMeans(select(., 2:29), na.rm = TRUE)) %>%
+  filter(!is.na(daily_mean)) %>%
+  select(date,daily_mean)
 ```
 
 ```{r}
@@ -34,7 +55,31 @@ ts_load_testing <- subset(ts_load,start = length(ts_load)-30)
 
 ts_load_training %>% mstl() %>%
   autoplot()
+
+ts_temperature <- msts(temperature$daily_mean, 
+                           seasonal.periods =c(7,365.25),
+                           start=c(2005,01,01))
+
+ts_temperature_training <- subset(ts_load,end = length(ts_load)-30)
+ts_temperature_testing <- subset(ts_load,start = length(ts_load)-30)
+
+ts_humidity <- msts(humidity$daily_mean, 
+                           seasonal.periods =c(7,365.25),
+                           start=c(2005,01,01))
+
+ts_humidity_training <- subset(ts_load,end = length(ts_load)-30)
+ts_humidity_testing <- subset(ts_load,start = length(ts_load)-30)
+
 ```
+
+```{r}
+#STL + ETS model
+ETS_fit <-  stlf(ts_load_training,h=30)
+autoplot(ETS_fit)
+ETS_scores <- accuracy(ETS_fit$mean,ts_load_testing)
+print(ETS_scores)
+```
+
 
 ```{r}
 # TBATS model
@@ -53,6 +98,7 @@ autoplot(ts_load_testing) +
 TBATS_scores <- accuracy(TBATS_forcast$mean,ts_load_testing)
 print(TBATS_scores)
 ```
+
 ```{r}
 NN_fit1 <- nnetar(ts_load_training,p=1,P=1,xreg=fourier(ts_load_training, K=c(2,12)))
 NN_for1 <- forecast(NN_fit1,h=30, xreg=fourier(ts_load_training, K=c(2,12),h=30))
@@ -88,10 +134,131 @@ print(NN_scores3)
 ```
 
 ```{r}
+NN_fit4 <- nnetar(ts_load_training,p=1,P=0,xreg=fourier(ts_load_training, K=c(2,12)))
+NN_for4 <- forecast(NN_fit4,h=30, xreg=fourier(ts_load_training, K=c(2,12),h=30))
+autoplot(NN_for4)
+autoplot(ts_load_testing) +
+  autolayer(NN_for4, series="Neural Network",PI=FALSE)
+
+NN_scores4 <- accuracy(NN_for4$mean,ts_load_testing)
+print(NN_scores4)
+```
+```{r}
+temp_regressors<- as.matrix(data.frame(fourier(ts_load_training, K=c(2,12)), "temp"= ts_temperature_training))
+
+temp_for<-forecast(ts_temperature_training,h=30)
+temp_regressors_for<-as.matrix(data.frame(fourier(ts_load_training, K=c(2,12),h=30), "temp"= temp_for$mean))
+
+
+hum_regressors<- as.matrix(data.frame(fourier(ts_load_training, K=c(2,12)), "hum"= ts_humidity_training))
+
+hum_for<-forecast(ts_humidity_training,h=30)
+hum_regressors_for<-as.matrix(data.frame(fourier(ts_load_training, K=c(2,12),h=30), "hum"= hum_for$mean))
+
+temp_hum_regressors<- as.matrix(data.frame(fourier(ts_load_training, K=c(2,12)), "temp"= ts_temperature_training, "hum"= ts_humidity_training))
+
+temp_hum_regressors_for<-as.matrix(data.frame(fourier(ts_load_training, K=c(2,12),h=30), "temp"= temp_for$mean,"hum"= hum_for$mean))
+```
+
+
+```{r}
+# NN+Temperature
+NN_fit5 <- nnetar(ts_load_training,p=1,P=0,xreg=temp_regressors)
+NN_for5 <- forecast(NN_fit5,h=30, xreg=temp_regressors_for)
+autoplot(NN_for5)
+autoplot(ts_load_testing) +
+  autolayer(NN_for5, series="Neural Network",PI=FALSE)
+
+NN_scores5 <- accuracy(NN_for5$mean,ts_load_testing)
+print(NN_scores5)
+
+```
+```{r}
+# NN+humidity
+NN_fit6 <- nnetar(ts_load_training,p=1,P=0,xreg=hum_regressors)
+NN_for6 <- forecast(NN_fit6,h=30, xreg=hum_regressors_for)
+autoplot(NN_for6)
+autoplot(ts_load_testing) +
+  autolayer(NN_for6, series="Neural Network",PI=FALSE)
+
+NN_scores6 <- accuracy(NN_for6$mean,ts_load_testing)
+print(NN_scores6)
+```
+
+```{r}
+# NN+humidity+temperature
+NN_fit7 <- nnetar(ts_load_training,p=1,P=0,xreg=temp_hum_regressors)
+NN_for7 <- forecast(NN_fit7,h=30, xreg=temp_hum_regressors_for)
+autoplot(NN_for7)
+autoplot(ts_load_testing) +
+  autolayer(NN_for7, series="Neural Network",PI=FALSE)
+
+NN_scores7 <- accuracy(NN_for7$mean,ts_load_testing)
+print(NN_scores7)
+```
+
+```{r}
+NN_fit5 <- nnetar(ts_load_training,p=0,P=0,xreg=fourier(ts_load_training, K=c(2,12)))
+NN_for5 <- forecast(NN_fit5,h=30, xreg=fourier(ts_load_training, K=c(2,12),h=30))
+autoplot(NN_for5)
+autoplot(ts_load_testing) +
+  autolayer(NN_for5, series="Neural Network",PI=FALSE)
+
+NN_scores5 <- accuracy(NN_for5$mean,ts_load_testing)
+print(NN_scores5)
+```
+
+
+```{r}
+#Arima+Temperature
+ARIMA_fit1<-auto.arima(ts_load_training,seasonal= FALSE, lambda=0,xreg=temp_regressors)
+ARIMA_for1<-forecast(ARIMA_fit1,xreg=temp_regressors_for,h=30)
+
+autoplot(ARIMA_for1)
+autoplot(ts_load_testing) +
+  autolayer(ARIMA_for1, series="ARIMA",PI=FALSE)
+
+ARIMA_scores1 <- accuracy(ARIMA_for1$mean,ts_load_testing)
+print(ARIMA_scores1)
+```
+
+```{r}
+#Arima+humidity
+ARIMA_fit2<-auto.arima(ts_load_training,seasonal= FALSE, lambda=0,xreg=hum_regressors)
+ARIMA_for2<-forecast(ARIMA_fit2,xreg=hum_regressors_for,h=30)
+
+autoplot(ARIMA_for2)
+autoplot(ts_load_testing) +
+  autolayer(ARIMA_for2, series="ARIMA",PI=FALSE)
+
+ARIMA_scores2 <- accuracy(ARIMA_for2$mean,ts_load_testing)
+print(ARIMA_scores2)
+```
+
+```{r}
+#SS Exponential smoothing
+
+SSES_fit1 <- es(ts_load_training,model="ZZZ",h=30,holdout=FALSE)
+plot(SSES_fit1)
+SSES_scores1 <- accuracy(SSES_fit1$forecast,ts_load_testing)
+print(SSES_scores1)
+```
+
+
+```{r}
+#SS with StructTS()
+
+SS_fit1 <- StructTS(ts_load_training, type="BSM",fixed=c(NA,NA,NA,NA)) 
+```
+
+
+
+
+```{r}
 scores <- as.data.frame(
-  rbind(TBATS_scores, NN_scores1,NN_scores2, NN_scores3)
+  rbind(TBATS_scores, NN_scores1,NN_scores2, NN_scores3,NN_scores4, NN_scores5, NN_scores6, ARIMA_scores1)
   )
-row.names(scores) <- c("TBATS_scores", "NN_scores1","NN_scores2","NN_scores3")
+row.names(scores) <- c("TBATS_scores", "NN_scores1","NN_scores2","NN_scores3","NN_scores4","NN_scores5","NN_scores6", "ARIMA_scores1")
 ```
 
 ```{r}
@@ -108,5 +275,21 @@ July_NN1<-data.frame(date=date, load=load)
 July_NN1
 write.csv(July_NN1, file = "July_NN1.csv", row.names = FALSE)
 ```
+
+```{r}
+# Fit load using NN4
+NN_fit4_load <- nnetar(ts_load,p=1,P=0,xreg=fourier(ts_load, K=c(2,12)))
+NN_for4_load <- forecast(NN_fit4_load,h=31, xreg=fourier(ts_load, K=c(2,12),h=31))
+autoplot(NN_for4_load)
+autoplot(ts_load) +
+  autolayer(NN_for4_load, series="Neural Network",PI=FALSE)
+
+date <- seq(ymd("2011-07-01"), ymd("2011-07-31"), by = "days")
+load<-NN_for4_load$mean
+July_NN4<-data.frame(date=date, load=load)
+July_NN4
+write.csv(July_NN1, file = "July_NN4.csv", row.names = FALSE)
+```
+
 
 
