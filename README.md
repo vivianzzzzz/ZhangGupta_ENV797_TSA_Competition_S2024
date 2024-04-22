@@ -4,7 +4,7 @@ Team Members: Chenjia Liu, Xiyue Zhang, Shubhangi Gupta
 
 
 ## Overview
-This repository is part of the TSA: Forecasting Competition, aimed at predicting daily demand for January 2011 using historical data on hourly demand, temperature, and relative humidity from January 2005 to December 2010. 
+This repository is part of the TSA: Forecasting Competition, aimed at predicting daily demand for July,2011 data using historical data on hourly demand, temperature, and relative humidity from 01/01/2005 to 06/30/2011. 
 
 ## Data
 The `/Competition/Data` directory contains three datasets:
@@ -38,9 +38,11 @@ Regressors: Fourier terms to capture seasonality, alongside temperature and humi
 
 ## Results and Best Forecast Model
 
-The test scores for all our models are shown below:
+The best model from our testing dataset is:
+Neural Network with p=1,P=0,k=(2,12)
+It has an RMSE 347.5092
 
-The best model we used to forecast the July data is the TBATS model which we obatined a MAPE score of 0.0998: 
+However, The best model we used to forecast the July data is the TBATS model which we obatined a MAPE score of 0.0998: 
 
 <img width="937" alt="截屏2024-04-22 下午3 55 43" src="https://github.com/vivianzzzzz/ZhangLiuGupta_ENV797_TSA_Competition_S2024/assets/143654445/8e2fc978-ab2d-483e-9d79-0ed4d5c86d28">
 
