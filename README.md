@@ -39,8 +39,8 @@ Regressors: Fourier terms to capture seasonality, alongside temperature and humi
 ## Results and Best Forecast Model
 
 The best model from our testing dataset is:
-Neural Network with p=1,P=0,k=(2,12)
-It has an RMSE 347.5092
+- Neural Network with p=1,P=0,k=(2,12)
+- It has an RMSE 347.5092
 
 However, The best model we used to forecast the July data is the TBATS model which we obatined a MAPE score of 0.0998: 
 
