@@ -13,7 +13,7 @@ The `/Competition/Data` directory contains three datasets:
 - Relative humidity
 
 ## Data Wrangling
-Hourly data is transformed into daily averages using the method outlined in the R markdown file from Lesson 11, utilizing pipes for efficient data aggregation.
+Hourly data is transformed into daily averages, utilizing pipes for efficient data aggregation.
 
 ## Models
 1. Exponential Smoothing (ETS)
